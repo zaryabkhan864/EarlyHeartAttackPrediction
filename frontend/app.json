@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "70ed0a45-3dd4-43bb-80d6-db077c3d74dc"
+      }
+    },
+    "android": {
+      "package": "com.romcass.frontend"
+    }
+  }
+}
