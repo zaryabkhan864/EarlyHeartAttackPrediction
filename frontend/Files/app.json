@@ -1,0 +1,52 @@
+{
+    "expo": {
+        "name": "EarlyHeartAttackPredictor",
+        "slug": "early-heart-attack-predictor",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.yourcompany.earlyheartattackpredictor",
+            "infoPlist": {
+                "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to health monitoring devices",
+                "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to connect to health monitoring devices"
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#ffffff"
+            },
+            "permissions": [
+                "android.permission.BLUETOOTH",
+                "android.permission.BLUETOOTH_ADMIN",
+                "android.permission.BLUETOOTH_CONNECT",
+                "android.permission.BLUETOOTH_SCAN"
+            ],
+            "package": "com.yourcompany.earlyheartattackpredictor"
+        },
+        "web": {
+            "favicon": "./assets/favicon.png"
+        },
+        "plugins": [
+            [
+                "expo-build-properties",
+                {
+                    "ios": {
+                        "useFrameworks": "static"
+                    }
+                }
+            ]
+        ]
+    }
+}
