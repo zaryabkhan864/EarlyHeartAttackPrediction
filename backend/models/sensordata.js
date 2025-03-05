@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
 const SensorDataSchema = new mongoose.Schema({
     ir: { type: Number, required: true },
@@ -6,4 +6,6 @@ const SensorDataSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model("SensorData", SensorDataSchema);
+export default mongoose.model("SensorData", SensorDataSchema);
+
+
