@@ -4,7 +4,7 @@ import connectDB from "./config/connection.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import cors from 'cors';
+import cors from "cors";
 
 // Convert __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
