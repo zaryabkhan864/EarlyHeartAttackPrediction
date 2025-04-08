@@ -26,8 +26,12 @@
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
-        "ACCESS_FINE_LOCATION"
-      ]
+        "ACCESS_FINE_LOCATION",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ],
+      "package": "com.zaryabkhan864.EHAP"
     },
     "web": {
       "favicon": "./assets/favicon.png"

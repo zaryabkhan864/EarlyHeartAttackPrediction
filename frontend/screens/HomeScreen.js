@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BleManager } from 'react-native-ble-plx';
 
 export default function HomeScreen({ navigation }) {
+    const [isBluetoothConnected, setIsBluetoothConnected] = useState(false);
+
     const quickActionCards = [
         {
             icon: 'heart-outline',
@@ -35,6 +38,23 @@ export default function HomeScreen({ navigation }) {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView>
+                <TouchableOpacity 
+                    onPress={() => navigation.navigate('BluetoothSetup')}
+                    style={[
+                        styles.bluetoothContainer,
+                        isBluetoothConnected ? styles.connected : styles.disconnected
+                    ]}
+                >
+                    <Ionicons 
+                        name="bluetooth" 
+                        size={20} 
+                        color={isBluetoothConnected ? 'white' : 'white'} 
+                    />
+                    <Text style={styles.bluetoothText}>
+                        {isBluetoothConnected ? 'Device Connected' : 'Add Bluetooth Device'}
+                    </Text>
+                </TouchableOpacity>
+
                 <View style={styles.headerContainer}>
                     <Text style={styles.welcomeText}>Welcome, John</Text>
                     <Text style={styles.subtitleText}>Early Heart Attack Predictor</Text>
@@ -97,6 +117,26 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F1FAEE',
+    },
+    bluetoothContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 10,
+        marginHorizontal: 15,
+        marginTop: 10,
+        borderRadius: 8,
+    },
+    connected: {
+        backgroundColor: '#2A9D8F', // Green for connected
+    },
+    disconnected: {
+        backgroundColor: '#E63946', // Red for disconnected
+    },
+    bluetoothText: {
+        color: 'white',
+        marginLeft: 8,
+        fontWeight: '500',
     },
     headerContainer: {
         backgroundColor: '#1D3557',
