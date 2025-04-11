@@ -1,194 +1,147 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, Alert, PermissionsAndroid, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View, Text, Button, FlatList, StyleSheet,
+  ActivityIndicator, Alert, PermissionsAndroid, Platform,
+} from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
+import base64 from 'react-native-base64';
 
-const BluetoothSetupScreen = ({ navigation }) => {
+const manager = new BleManager();
+
+const BluetoothSetupScreen = () => {
   const [devices, setDevices] = useState([]);
   const [connectedDevice, setConnectedDevice] = useState(null);
+  const [data, setData] = useState('');
+  const [characteristic, setCharacteristic] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [data, setData] = useState(null);
-  const [manager] = useState(new BleManager());
 
-  // Request Bluetooth permissions for Android
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        ]);
-        
-        if (
-          granted['android.permission.ACCESS_FINE_LOCATION'] !== PermissionsAndroid.RESULTS.GRANTED ||
-          granted['android.permission.BLUETOOTH_SCAN'] !== PermissionsAndroid.RESULTS.GRANTED ||
-          granted['android.permission.BLUETOOTH_CONNECT'] !== PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          Alert.alert('Permissions required', 'Bluetooth scanning requires location and Bluetooth permissions');
-          return false;
-        }
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      ]);
+      return Object.values(granted).every(val => val === PermissionsAndroid.RESULTS.GRANTED);
     }
     return true;
   };
 
-  // BLE scan function
-  const startScan = async () => {
-    const hasPermissions = await requestPermissions();
-    if (!hasPermissions) return;
+  const scanDevices = async () => {
+    const permission = await requestPermissions();
+    if (!permission) {
+      Alert.alert('Permission denied');
+      return;
+    }
 
-    setIsScanning(true);
     setDevices([]);
-    
+    setIsScanning(true);
+
     manager.startDeviceScan(null, null, (error, device) => {
       if (error) {
         console.error(error);
         setIsScanning(false);
         return;
       }
-      
-      // Only show devices with names or local names
-      if (device.name || device.localName) {
-        setDevices(prevDevices => {
-          const exists = prevDevices.some(d => d.id === device.id);
-          return exists ? prevDevices : [...prevDevices, device];
+
+      if (device.name && device.name.includes('HM')) {
+        setDevices(prev => {
+          const exists = prev.find(d => d.id === device.id);
+          return exists ? prev : [...prev, device];
         });
       }
     });
 
-    // Stop scanning after 5 seconds
     setTimeout(() => {
       manager.stopDeviceScan();
       setIsScanning(false);
     }, 5000);
   };
 
-  // BLE connection function
-  const connectToDevice = async (device) => {
-    setIsConnecting(true);
+  const connectDevice = async (device) => {
     try {
       const connected = await device.connect();
       await connected.discoverAllServicesAndCharacteristics();
+      const services = await connected.services();
+
+      for (const service of services) {
+        const chars = await service.characteristics();
+        for (const c of chars) {
+          if (c.isReadable || c.isNotifiable) {
+            setCharacteristic(c);
+            c.monitor((error, char) => {
+              if (error) {
+                console.error('Monitor error:', error);
+                return;
+              }
+              const value = base64.decode(char?.value || '');
+              setData(value);
+            });
+            break;
+          }
+        }
+      }
+
       setConnectedDevice(connected);
-      
-      // Here you would set up actual monitoring of characteristics
-      // For now, we'll simulate data
-      const interval = setInterval(() => {
-        setData(`Heart Rate: ${Math.floor(60 + Math.random() * 40)} bpm`);
-      }, 3000);
-      
-      return () => clearInterval(interval);
-    } catch (error) {
-      console.error('Connection error:', error);
-      Alert.alert('Connection Failed', 'Could not connect to the device');
-    } finally {
-      setIsConnecting(false);
+    } catch (err) {
+      console.error('Connection failed', err);
+      Alert.alert('Failed to connect');
     }
   };
 
-  // Disconnect function
-  const disconnectDevice = () => {
+  const disconnectDevice = async () => {
     if (connectedDevice) {
-      connectedDevice.cancelConnection();
+      await connectedDevice.cancelConnection();
+      setConnectedDevice(null);
+      setCharacteristic(null);
+      setData('');
     }
-    setConnectedDevice(null);
-    setData(null);
-  };
-
-  useEffect(() => {
-    return () => {
-      manager.destroy();
-    };
-  }, []);
-
-  const getDeviceName = (device) => {
-    return device.name || device.localName || 'Unnamed Device';
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons 
-          name="arrow-back" 
-          size={24} 
-          color="#1D3557" 
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.title}>Bluetooth Setup</Text>
-        <View style={{ width: 24 }} /> // Spacer for alignment
-      </View>
+      <Button
+        title={isScanning ? "Scanning..." : "Scan for HM-10"}
+        onPress={scanDevices}
+        disabled={isScanning}
+      />
 
-      <View style={styles.controlPanel}>
+      {connectedDevice && (
         <Button
-          title={isScanning ? 'Scanning...' : 'Scan for Devices'}
-          onPress={startScan}
-          disabled={isScanning || connectedDevice}
+          title="Disconnect"
+          onPress={disconnectDevice}
           color="#E63946"
         />
-        
-        {connectedDevice && (
-          <Button
-            title="Disconnect"
-            onPress={disconnectDevice}
-            color="#457B9D"
-            style={styles.disconnectButton}
-          />
-        )}
-      </View>
-
-      {isScanning && (
-        <View style={styles.scanningIndicator}>
-          <ActivityIndicator size="small" color="#E63946" />
-          <Text style={styles.scanningText}>Searching for devices...</Text>
-        </View>
       )}
 
       <FlatList
         data={devices}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.deviceItem}>
-            <Ionicons name="bluetooth" size={20} color="#1D3557" />
-            <View style={styles.deviceInfo}>
-              <Text style={styles.deviceName}>{getDeviceName(item)}</Text>
-              <Text style={styles.deviceId}>{item.id}</Text>
-            </View>
-            <Button
-              title={isConnecting ? 'Connecting...' : 'Connect'}
-              onPress={() => connectToDevice(item)}
-              disabled={!!connectedDevice || isConnecting}
-            />
+            <Text style={styles.deviceText}>{item.name} - {item.id}</Text>
+            <Button title="Connect" onPress={() => connectDevice(item)} />
           </View>
         )}
-        ListEmptyComponent={
-          !isScanning && (
-            <Text style={styles.emptyText}>
-              No devices found. Tap "Scan for Devices" to search.
-            </Text>
-          )
-        }
       />
 
       {connectedDevice && (
         <View style={styles.dataContainer}>
-          <Text style={styles.connectedText}>
-            Connected to: {getDeviceName(connectedDevice)}
-          </Text>
-          <View style={styles.dataBox}>
-            <Text style={styles.dataTitle}>Live Data:</Text>
-            <Text style={styles.dataValue}>{data || 'Waiting for data...'}</Text>
-          </View>
+          <Text style={styles.title}>Connected to {connectedDevice.name}</Text>
+          <Text style={styles.dataText}>{data || 'Waiting for data...'}</Text>
         </View>
       )}
     </View>
   );
 };
 
+const styles = StyleSheet.create({
+  container: { padding: 16, flex: 1, backgroundColor: '#fff' },
+  deviceItem: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 },
+  deviceText: { fontSize: 16 },
+  dataContainer: { marginTop: 20 },
+  title: { fontSize: 18, fontWeight: 'bold' },
+  dataText: { marginTop: 10, fontSize: 16, color: '#333' },
+});
 
 export default BluetoothSetupScreen;
