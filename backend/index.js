@@ -1,17 +1,15 @@
-import express from "express";
-import bodyParser from "body-parser";
-import connectDB from "./config/connection.js";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import cors from "cors";
+const express = require('express');
+const app = express();
 
-// Convert __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const path = require('path');
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, "config", "config.env") });
+if (process.env.NODE_ENV !== 'PRODUCTION') {
+    dotenv.config({ path: path.join(__dirname, 'config', 'config.env') });
+}
 
 // Validate required environment variables
 const requiredEnvVars = ['PORT', 'MONGODB_URI'];
@@ -22,24 +20,22 @@ for (const envVar of requiredEnvVars) {
     }
 }
 
-const app = express();
+// Connect to DB
+const connectDB = require('./config/connection');
+connectDB();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date() });
 });
 
-// Connect to Database
-connectDB();
-
-// connect to routes
-import sensorRoutes from './routes/sensorRoutes.js';
+// Routes
+const sensorRoutes = require('./routes/sensorRoutes');
 app.use('/api/v1', sensorRoutes);
 
 // Error handling middleware
@@ -53,15 +49,14 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Define PORT
+// Start server
 const PORT = process.env.PORT || 5000;
-
-// Start Server
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
     console.log(`Error: ${err.message}`);
-    // Close server & exit process
-    process.exit(1);
+    server.close(() => process.exit(1));
 });
